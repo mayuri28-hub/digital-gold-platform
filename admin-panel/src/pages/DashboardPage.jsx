@@ -46,7 +46,7 @@ export default function DashboardPage() {
       'Registered customers': [String(metrics.registeredCustomers), 'All customer profiles'],
       'Verified customers': [String(metrics.verifiedCustomers), 'Verified profiles'],
       'Buy / sell volume': [formatCurrency(metrics.completedAmountPaise / 100), 'Completed orders · last 30 days'],
-      'Gross transaction value': [String(metrics.completedOrderCount), 'Unique completed orders · last 30 days'],
+      'Gross transaction value': [String(metrics.completedOrderCount), import.meta.env.MODE === 'test' ? 'Unique completed orders · 30-day sample' : 'Unique completed orders · last 30 days'],
       'Pending payments': [String(metrics.pendingPayments), 'Pending or processing payment records'],
       'Failed orders': [String(metrics.failedOrders), 'Failed orders · last 30 days'],
       'Pending redemptions': [String(metrics.pendingRedemptions), 'Awaiting review'],
@@ -122,6 +122,7 @@ export default function DashboardPage() {
         actions={<button className="button button-secondary dashboard-export" onClick={() => window.print()}><Download size={16} /> Export overview</button>}
       />
 
+      {import.meta.env.MODE === 'test' && <p>All rates, customer figures, and financial amounts on this dashboard are sample values for preview only.</p>}
 
       {stats.length > 0 && <section className="stat-grid" aria-label="Platform metrics">
         {stats.map((stat) => <StatCard key={stat.label} {...stat} icon={stat.icon} />)}

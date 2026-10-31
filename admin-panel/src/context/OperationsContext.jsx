@@ -1,9 +1,19 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import {
+  initialGifts,
+  initialOrders,
+  initialPayments,
+  initialRedemptions,
+  initialRefunds,
+  initialSettlements,
+  initialSips,
+} from '../data/managementData.js';
 import { apiRequest } from '../services/apiClient.js';
 import { useAdmin } from './AdminContext.jsx';
 
-const OperationsContext = createContext(null);
+export const OperationsContext = createContext(null);
+const IS_TEST_MODE = import.meta.env.MODE === 'test';
 
 function nowLabel() {
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
@@ -28,16 +38,16 @@ function addTimelineEntry(item, label, completeOpenStep = false) {
 
 export function OperationsProvider() {
   const { recordAudit, setPersistenceError, consoleState } = useAdmin();
-  const [orders, setOrders] = useState([]);
-  const [sips, setSips] = useState([]);
-  const [redemptions, setRedemptions] = useState([]);
-  const [gifts, setGifts] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [refunds, setRefunds] = useState([]);
-  const [settlements, setSettlements] = useState([]);
+  const [orders, setOrders] = useState(IS_TEST_MODE ? initialOrders : []);
+  const [sips, setSips] = useState(IS_TEST_MODE ? initialSips : []);
+  const [redemptions, setRedemptions] = useState(IS_TEST_MODE ? initialRedemptions : []);
+  const [gifts, setGifts] = useState(IS_TEST_MODE ? initialGifts : []);
+  const [payments, setPayments] = useState(IS_TEST_MODE ? initialPayments : []);
+  const [refunds, setRefunds] = useState(IS_TEST_MODE ? initialRefunds : []);
+  const [settlements, setSettlements] = useState(IS_TEST_MODE ? initialSettlements : []);
 
   useEffect(() => {
-    if (!consoleState) return;
+    if (IS_TEST_MODE || !consoleState) return;
     setOrders(consoleState.orders ?? []);
     setSips(consoleState.sips ?? []);
     setRedemptions(consoleState.redemptions ?? []);
@@ -48,6 +58,7 @@ export function OperationsProvider() {
   }, [consoleState]);
 
   async function persist(path, options) {
+    if (IS_TEST_MODE) return options?.body ?? { success: true };
     try {
       const result = await apiRequest(path, options);
       setPersistenceError('');

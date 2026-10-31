@@ -55,17 +55,22 @@ async function goTo(path) {
   await userEvent.click(link);
 }
 
-<<<<<<< HEAD
+
 function productListPanel() {
   return screen.getByRole('textbox', { name: 'Search products' }).closest('section');
 }
 
 beforeEach(() => {
-  persistDemoAccount();
+  window.localStorage.clear();
+  window.sessionStorage.clear();
 });
-=======
-beforeEach(() => window.localStorage.clear());
->>>>>>> 24c3ea8 (Fix API connection and login configuration)
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 afterEach(() => {
   cleanup();
@@ -712,12 +717,14 @@ describe('administration demo behavior and reports', () => {
     await user.click(screen.getByRole('tab', { name: 'Refunds' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Filter report status' }), 'Pending review');
     await user.click(screen.getByRole('button', { name: 'Export filtered CSV' }));
-    const csv = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(new TextDecoder('utf-8', { ignoreBOM: true }).decode(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsArrayBuffer(exportedBlob);
-    });
+    const csv = typeof exportedBlob.text === 'function'
+      ? await exportedBlob.text()
+      : await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(new TextDecoder('utf-8', { ignoreBOM: true }).decode(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(exportedBlob);
+      });
     expect(csv).toContain('"Record ID","Reference","Customer / provider"');
     expect(csv).toContain('REF-2026-00318');
     expect(csv).toContain('REF-2026-00314');

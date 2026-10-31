@@ -4,15 +4,44 @@
   "services": {
     "api": {
       "root": "apps/api",
-      "framework": "express",
       "buildCommand": "npm run build",
       "entrypoint": "dist/app.js"
     },
-    "web": {
+    "admin": {
       "root": "admin-panel",
       "framework": "vite",
       "buildCommand": "npm run build",
-      "outputDirectory": "dist"
+      "outputDirectory": "dist",
+      "rewrites": [
+        {
+          "source": "/admin/assets/:path*",
+          "destination": "/assets/:path*"
+        },
+        {
+          "source": "/admin/favicon.svg",
+          "destination": "/favicon.svg"
+        },
+        {
+          "source": "/admin",
+          "destination": "/index.html"
+        },
+        {
+          "source": "/admin/:path*",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "web": {
+      "root": "apps/web",
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
     }
   },
   "rewrites": [
@@ -20,6 +49,18 @@
       "source": "/api/(.*)",
       "destination": {
         "service": "api"
+      }
+    },
+    {
+      "source": "/admin",
+      "destination": {
+        "service": "admin"
+      }
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": {
+        "service": "admin"
       }
     },
     {

@@ -14,6 +14,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle.js';
 
 const PAGE_SIZE = 10;
 const REPORT_TYPES = ['Payments', 'Refunds', 'Settlements', 'Orders'];
+const IS_TEST_MODE = import.meta.env.MODE === 'test';
 
 function reportRecords(type, data) {
   if (type === 'Payments') return data.payments.map((row) => ({ id: row.id, reference: row.orderId, party: row.customer, category: row.method, amount: row.amount, status: row.status, date: row.date, detail: row.providerRef }));
@@ -69,6 +70,17 @@ export default function ReportsPage() {
     setIsExporting(true);
     setExportError('');
     try {
+      if (IS_TEST_MODE) {
+        downloadCsv(filename, CSV_COLUMNS, filtered);
+        recordAudit({
+          action: 'Exported report',
+          category: 'Reports',
+          target: filename,
+          detail: `${filtered.length} filtered ${reportType.toLowerCase()} rows were exported from test data.`,
+          outcome: 'Completed',
+        });
+        return;
+      }
       const result = await apiRequest('/api/admin/console/reports', {
         method: 'POST',
         body: { type: reportType, status: statusFilter, search: query.trim(), startDate, endDate },

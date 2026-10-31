@@ -6,6 +6,8 @@ import { DEFAULT_SETTINGS } from '../data/adminData.js';
 import { useAdmin } from '../context/AdminContext.jsx';
 import useDocumentTitle from '../hooks/useDocumentTitle.js';
 
+const IS_TEST_MODE = import.meta.env.MODE === 'test';
+
 export default function SettingsPage() {
   useDocumentTitle('Settings');
   const { settings, updateSettings, recordAudit } = useAdmin();
@@ -27,7 +29,7 @@ export default function SettingsPage() {
     const result = await updateSettings({ ...draft, organizationName: draft.organizationName.trim(), supportEmail: draft.supportEmail.trim().toLowerCase() });
     if (!result.success) { setNotice(result.message); return; }
     recordAudit({ action: 'Updated platform settings', category: 'Settings', target: 'Platform preferences', detail: 'Saved local demo settings. No backend configuration changed.' });
-    setNotice('Settings saved.');
+    setNotice(result.sessionOnly ? 'Settings saved for this browser session only.' : 'Settings saved.');
   }
 
   async function confirmChange() {
@@ -38,7 +40,7 @@ export default function SettingsPage() {
       if (!result.success) { setNotice(result.message); setConfirmAction(''); return; }
       setDraft(next);
       recordAudit({ action: `${maintenanceMode ? 'Enabled' : 'Disabled'} maintenance mode`, category: 'Settings', target: 'Maintenance mode', detail: 'Local demo preference changed; no service availability is affected.' });
-      setNotice(`Maintenance mode ${maintenanceMode ? 'enabled' : 'disabled'}.`);
+      setNotice(IS_TEST_MODE ? `Demo banner ${maintenanceMode ? 'enabled' : 'disabled'}. No service availability changed.` : `Maintenance mode ${maintenanceMode ? 'enabled' : 'disabled'}.`);
     } else if (confirmAction === 'reset') {
       const result = await updateSettings(DEFAULT_SETTINGS);
       if (!result.success) { setNotice(result.message); setConfirmAction(''); return; }
@@ -70,7 +72,7 @@ export default function SettingsPage() {
             <label className="settings-option"><span><strong>Login alerts</strong><small>Show a local preference for administrator login notifications.</small></span><input type="checkbox" checked={draft.loginAlerts} onChange={(event) => updateField('loginAlerts', event.target.checked)} /></label>
             <label className="settings-option"><span><strong>Weekly report reminder</strong><small>Enable a reminder preference. No email is sent by this API.</small></span><input type="checkbox" checked={draft.weeklyReport} onChange={(event) => updateField('weeklyReport', event.target.checked)} /></label>
           </div>
-          <div className="maintenance-row"><span className="settings-icon settings-icon-amber"><ShieldAlert size={17} /></span><span><strong>Maintenance mode flag</strong><small>Stored setting only; it does not alter API availability.</small></span><button type="button" className={`button ${draft.maintenanceMode ? 'button-danger' : 'button-secondary'}`} onClick={() => setConfirmAction('maintenance')}>{draft.maintenanceMode ? 'Turn off' : 'Turn on'} flag</button></div>
+          <div className="maintenance-row"><span className="settings-icon settings-icon-amber"><ShieldAlert size={17} /></span><span><strong>Maintenance mode flag</strong><small>Stored setting only; it does not alter API availability.</small></span><button type="button" className={`button ${draft.maintenanceMode ? 'button-danger' : 'button-secondary'}`} onClick={() => setConfirmAction('maintenance')}>{IS_TEST_MODE ? `${draft.maintenanceMode ? 'Turn off' : 'Turn on'} demo banner` : `${draft.maintenanceMode ? 'Turn off' : 'Turn on'} flag`}</button></div>
         </section>
         <div className="settings-footer"><button type="button" className="button button-secondary" onClick={() => setConfirmAction('reset')}><RotateCcw size={14} /> Reset to demo defaults</button><button type="submit" className="button button-primary"><Save size={14} /> Save settings</button></div>
       </form>

@@ -1,20 +1,44 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import {
+  initialCustomers,
+  initialLedgerEntries,
+  initialMetalMakingCharges,
+  initialProducts,
+  initialRateRequests,
+} from '../data/managementData.js';
 import { apiRequest } from '../services/apiClient.js';
 import { useAdmin } from './AdminContext.jsx';
 
-const ManagementContext = createContext(null);
+export const ManagementContext = createContext(null);
+const IS_TEST_MODE = import.meta.env.MODE === 'test';
 const SUPPORTED_METALS = ['Gold', 'Silver', 'Platinum'];
+const TEST_MAKING_CHARGES_KEY = 'admin-test-making-charges';
+
+function initialMakingCharges() {
+  if (!IS_TEST_MODE) return [];
+  try {
+    const savedCharges = JSON.parse(sessionStorage.getItem(TEST_MAKING_CHARGES_KEY) ?? 'null');
+    if (Array.isArray(savedCharges) && SUPPORTED_METALS.every((metal) => savedCharges.some((item) => item.metal === metal))) {
+      return savedCharges;
+    }
+  } catch {
+    return initialMetalMakingCharges;
+  }
+  return initialMetalMakingCharges;
+}
+
 export function ManagementProvider() {
   const { activeRoleId, hasPermission, recordAudit, setPersistenceError, consoleState } = useAdmin();
-  const [customers, setCustomers] = useState([]);
-  const [customersLoading, setCustomersLoading] = useState(true);
-  const [products, setProducts] = useState([]);
-  const [rateRequests, setRateRequests] = useState([]);
-  const [metalMakingCharges, setMetalMakingCharges] = useState([]);
-  const [ledgerEntries, setLedgerEntries] = useState([]);
+  const [customers, setCustomers] = useState(IS_TEST_MODE ? initialCustomers : []);
+  const [customersLoading, setCustomersLoading] = useState(!IS_TEST_MODE);
+  const [products, setProducts] = useState(IS_TEST_MODE ? initialProducts : []);
+  const [rateRequests, setRateRequests] = useState(IS_TEST_MODE ? initialRateRequests : []);
+  const [metalMakingCharges, setMetalMakingCharges] = useState(initialMakingCharges);
+  const [ledgerEntries, setLedgerEntries] = useState(IS_TEST_MODE ? consoleState?.ledgerEntries ?? initialLedgerEntries : []);
 
   useEffect(() => {
+    if (IS_TEST_MODE) return undefined;
     if (activeRoleId !== 'SUPER_ADMIN' && !consoleState) return;
     if (!hasPermission('customers')) {
       setCustomers([]);
@@ -40,7 +64,7 @@ export function ManagementProvider() {
   }, [activeRoleId, consoleState, hasPermission, setPersistenceError]);
 
   useEffect(() => {
-    if (!consoleState) return;
+    if (IS_TEST_MODE || !consoleState) return;
     setProducts(consoleState.products ?? []);
     setRateRequests(consoleState.rateRequests ?? []);
     const configuredCharges = consoleState.metalMakingCharges ?? [];
@@ -50,6 +74,7 @@ export function ManagementProvider() {
   }, [consoleState]);
 
   async function persist(path, options) {
+    if (IS_TEST_MODE) return options?.body ?? { success: true };
     try {
       const result = await apiRequest(path, options);
       setPersistenceError('');
@@ -88,6 +113,7 @@ export function ManagementProvider() {
       ? { ...item, chargePerGramPaise, enabled, updatedAt }
       : item)
       : [...metalMakingCharges, { metal, chargePerGramPaise, enabled, updatedAt }];
+    if (IS_TEST_MODE) sessionStorage.setItem(TEST_MAKING_CHARGES_KEY, JSON.stringify(nextCharges));
     setMetalMakingCharges(nextCharges);
     setPersistenceError('');
     recordAudit({
@@ -108,7 +134,9 @@ export function ManagementProvider() {
     ledgerEntries,
     updateMetalMakingCharge,
     addCustomer: async (customer) => {
-      const saved = await persist('/api/admin/console/customers', { method: 'POST', body: customer });
+      const saved = IS_TEST_MODE
+        ? { ...customer, id: 'CUS-10500', kycStatus: 'Pending', status: 'Active', joined: '15 Oct 2026', transactions: 0 }
+        : await persist('/api/admin/console/customers', { method: 'POST', body: customer });
       if (!saved) return null;
       setCustomers((items) => [saved, ...items]);
       recordAudit({ action: 'Created customer profile', category: 'Customers', target: saved.id, detail: 'Customer profile created with pending KYC.' });

@@ -13,6 +13,8 @@ import { formatCurrency } from '../utils/formatters.js';
 import { assertQuantityWithinConfiguredLimits, calculateBuyQuote, calculatePortfolio, calculateSellQuote, formatGrams, formatPaise, productFeePolicy } from '../utils/financial.js';
 import useDocumentTitle from '../hooks/useDocumentTitle.js';
 
+const IS_TEST_MODE = import.meta.env.MODE === 'test';
+
 const PAGE_SIZE = 7;
 
 export default function OrdersPage() {
@@ -166,7 +168,7 @@ export default function OrdersPage() {
   return (
     <>
       <PageHeader eyebrow="TRANSACTION OPERATIONS" title="Buy & sell orders" description="Review persisted customer orders, pending payments, and metal ledger status." actions={<div className="page-action-pair"><button className="button button-secondary" onClick={() => { setOrderType('Sell'); setBasis('quantity'); setEnteredValue(''); setSelectedCustomerId(''); setSelectedProductId(''); setFormError(''); setFormOpen(true); }}><ArrowUpRight size={15} /> New sell</button><button className="button button-primary" onClick={() => { setOrderType('Buy'); setBasis('amount'); setEnteredValue(''); setSelectedCustomerId(''); setSelectedProductId(''); setFormError(''); setFormOpen(true); }}><Plus size={15} /> New buy</button></div>} />
-      <SimulatedBanner>Orders and payment intents are stored in MySQL. No gateway capture, payout, or custody movement is connected.</SimulatedBanner>
+      <SimulatedBanner>{IS_TEST_MODE ? 'No payments, metal transfers, or custody movements are initiated in this test session.' : 'Orders and payment intents are stored in MySQL. No gateway capture, payout, or custody movement is connected.'}</SimulatedBanner>
       <section className="management-stat-grid">
         <article><span className="management-stat-icon stat-icon-teal"><ArrowDownLeft size={17} /></span><div><span>Total orders</span><strong>{orders.length}</strong></div></article>
         <article><span className="management-stat-icon stat-icon-amber"><span className="stat-mini-dot" /></span><div><span>Awaiting processing</span><strong>{orders.filter((item) => item.status === 'Pending' || item.status === 'Processing').length}</strong></div></article>
@@ -184,7 +186,7 @@ export default function OrdersPage() {
         <DataTable columns={columns} rows={pageRows} allRows={filtered} page={page} pageSize={PAGE_SIZE} onPageChange={setPage} />
         <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} />
       </section>
-      <Modal open={formOpen} onClose={() => setFormOpen(false)} title={`Create ${orderType.toLowerCase()} order`} description="Creates a stored order and pending payment intent. External payment and custody actions are not connected.">
+      <Modal open={formOpen} onClose={() => setFormOpen(false)} title={IS_TEST_MODE ? `Create simulated ${orderType.toLowerCase()} order` : `Create ${orderType.toLowerCase()} order`} description={IS_TEST_MODE ? 'This simulated order stays in the test session. No payment or custody action is performed.' : 'Creates a stored order and pending payment intent. External payment and custody actions are not connected.'}>
         <form className="management-form" onSubmit={submitOrder}>
           <div className="form-grid">
             <label className="field-block form-grid-full"><span>Customer</span><select name="customerId" required value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}><option value="" disabled>Select a customer</option>{customers.filter((customer) => customer.status === 'Active').map((customer) => <option value={customer.id} key={customer.id}>{customer.name} · {customer.id}</option>)}</select></label>
