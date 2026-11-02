@@ -6,7 +6,7 @@
       "root": "apps/api",
       "framework": "express",
       "buildCommand": "npm run build",
-      "entrypoint": "dist/app.js"
+      "entrypoint": "src/app.ts"
     },
     "admin": {
       "root": "admin-panel",
